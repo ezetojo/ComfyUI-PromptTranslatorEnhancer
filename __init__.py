@@ -1,6 +1,6 @@
 """
 ComfyUI-PromptTranslator-Enhancer
-Enhances and translates prompts from Spanish to English using local GGUF models.
+Translates and enhances prompts from multiple languages to English using local GGUF models.
 """
 
 from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
