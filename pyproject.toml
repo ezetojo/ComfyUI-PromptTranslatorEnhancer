@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-prompt-translator-enhancer"
+description = "Translates and enhances prompts from multiple languages to English using local GGUF models."
+version = "0.0.1"
+license = { file = "LICENSE" }
+dependencies = ["llama-cpp-python>=0.2.0"]
+
+[project.urls]
+Repository = "https://github.com/ezetojo/ComfyUI-PromptTranslatorEnhancer"
+
+[tool.comfy]
+PublisherId = "ezetojo" 
+DisplayName = "Prompt Translator & Enhancer"
+Icon = ""
