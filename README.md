@@ -10,6 +10,22 @@ Custom node para ComfyUI que traduce y mejora prompts desde distintos idiomas al
 - 🖥️ **100% local** — usa modelos GGUF vía `llama-cpp-python`
 - 🔄 **Modelo reutilizable** — carga una vez, usa en múltiples nodos
 
+## Ejemplos en acción
+
+Aquí tienes cómo se ve el nodo en ComfyUI en sus diferentes estados:
+
+### Nodo Vacío
+![Nodo Vacío](assets/node_empty.png)
+
+### Traducción Básica (Basic)
+![Nivel Basic](assets/node_basic.png)
+
+### Traducción y Mejora Detallada (Detailed)
+![Nivel Detailed](assets/node_detailed.png)
+
+### Mejora Creativa (Creative)
+![Nivel Creative](assets/node_creative.png)
+
 ## Nodos incluidos
 
 | Nodo | Descripción |
