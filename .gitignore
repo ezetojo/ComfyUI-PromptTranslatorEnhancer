@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.whl
 
 # ComfyUI
 models/
@@ -18,3 +19,7 @@ input/
 # OS
 .DS_Store
 Thumbs.db
+
+# Misc
+.tracking
+.gemini/
