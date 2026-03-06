@@ -237,24 +237,94 @@ def get_available_gguf_models():
 
 
 # System prompts per enhancement level
+# Common suffix appended to all system prompts to suppress chain-of-thought
+_NO_THINK = (
+    " Do NOT include any reasoning, thinking, or explanation. "
+    "Do NOT wrap your answer in <think> tags. "
+    "Respond with ONLY the final comma-separated English tags, nothing else."
+)
+
 SYSTEM_PROMPTS = {
     "basic": (
         "You are an AI assistant. Translate the following user prompt directly into English for an image generator. "
         "Do not add quotes, do not say 'Here is the translation'. Just output the translated English tags."
+        + _NO_THINK
     ),
     "detailed": (
         "You are an expert prompt engineer. You will receive an image generation prompt in any language. "
         "Your task is to translate it to English and enhance it with rich, descriptive details "
         "(lighting, camera, composition, high quality). Output ONLY a comma-separated list of tags in English. "
         "Never repeat tags. Do not add conversational text."
+        + _NO_THINK
     ),
     "creative": (
         "You are a creative art director. You will receive an image generation prompt in any language. "
         "Your task is to translate it to English and transform it into a stunning, highly artistic, and uniquely styled prompt. "
         "Output ONLY a comma-separated list of English tags. Never repeat tags. Do not add conversational text."
+        + _NO_THINK
     ),
 }
 
+
+import re
+
+def _strip_thinking(text):
+    """Remove chain-of-thought / reasoning blocks from LLM output.
+
+    Handles:
+      1. Explicit <think>...</think> blocks (complete or incomplete)
+      2. Untagged reasoning text that Qwen3 sometimes emits after the answer
+    """
+    if not text:
+        return text
+
+    # 1. Remove complete <think>...</think> blocks (possibly multiple)
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+
+    # 2. Remove incomplete <think> block (no closing tag) — keep text before it
+    if '<think>' in text:
+        text = text[:text.find('<think>')].strip()
+
+    # 3. Remove </think> leftovers (e.g. response starts with </think>\n content)
+    if '</think>' in text:
+        text = text[text.rfind('</think>') + len('</think>'):].strip()
+
+    # 4. Remove untagged reasoning that Qwen3 sometimes appends after the answer
+    #    Strategy: scan lines and cut from the first "reasoning" line onwards
+    _REASONING_STARTS = (
+        'okay', 'wait', 'let me', 'the input', 'the original',
+        'translating', 'translation', 'i think', "i'll", 'so i',
+        'hmm', 'alright', 'so ', 'but ', 'however', 'note:',
+        'the spanish', 'the difference', 'maybe', 'the user',
+        'the provided', 'the prompt', 'the text', 'in the',
+    )
+
+    lines = text.split('\n')
+    if len(lines) > 1:
+        # Find the first line that looks like reasoning
+        cut_at = None
+        for i, line in enumerate(lines):
+            stripped = line.strip().lower()
+            if not stripped:
+                continue
+            if any(stripped.startswith(prefix) for prefix in _REASONING_STARTS):
+                cut_at = i
+                break
+        if cut_at is not None and cut_at > 0:
+            # Keep only lines before the reasoning started
+            text = '\n'.join(lines[:cut_at]).strip()
+        elif cut_at == 0:
+            # The ENTIRE output is reasoning — try to find any comma-separated
+            # tags line after the reasoning
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if stripped and ',' in stripped and not any(
+                    stripped.lower().startswith(w) for w in _REASONING_STARTS
+                ):
+                    text = stripped
+                    break
+
+    return text
 
 
 def deduplicate_tags(prompt):
@@ -326,12 +396,7 @@ def run_llm_enhancement(llm_model, prompt_text, enhancement_level, max_tokens, t
     print(f"[PromptEnhancer/Debug] Raw LLM Reply: {repr(result)}")
 
     # Clean up: remove thinking blocks if model outputs them (Qwen3 /think)
-    if "<think>" in result and "</think>" in result:
-        think_end = result.rfind("</think>")
-        result = result[think_end + len("</think>"):].strip()
-    elif "<think>" in result:
-        # Incomplete think block, remove everything from <think> onwards
-        result = result[:result.find("<think>")].strip()
+    result = _strip_thinking(result)
 
     # Remove surrounding quotes if present
     if (result.startswith('"') and result.endswith('"')) or \
